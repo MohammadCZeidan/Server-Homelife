@@ -1,0 +1,38 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/app"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/bootstrap"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/config"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/database"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/public"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/resources"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/routes"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/storage"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/tests"
+		},
+		{
+			"path": "../../mix baxkfront/laravel-Parntry/pantryProject/vendor"
+		}
+	],
+	"settings": {}
+}
