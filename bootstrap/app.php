@@ -36,6 +36,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
         
+        // Register custom middleware aliases
+        $middleware->alias([
+            'household.required' => \App\Http\Middleware\EnsureUserHasHousehold::class,
+            'household.validate' => \App\Http\Middleware\ValidateHouseholdAccess::class,
+            'admin.only' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+        ]);
+        
         // Configure authentication to return JSON for API routes instead of redirecting
         $middleware->redirectGuestsTo(function ($request) {
             if ($request->is('api/*') || $request->expectsJson()) {

@@ -65,6 +65,32 @@ class AuthController extends Controller
         return $this->responseJSON($user);
     }
 
+    public function getAllUsers()
+    {
+        // Get all users with their roles and household information
+        $users = \App\Models\User::with(['role', 'household'])
+            ->select('id', 'name', 'email', 'user_role_id', 'household_id', 'created_at')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role ? [
+                        'id' => $user->role->id,
+                        'role' => $user->role->role,
+                    ] : null,
+                    'household' => $user->household ? [
+                        'id' => $user->household->id,
+                        'name' => $user->household->name,
+                    ] : null,
+                    'created_at' => $user->created_at,
+                ];
+            });
+
+        return $this->responseJSON($users);
+    }
+
     public function updateProfile(Request $request)
     {
         $user = $this->authService->me();
