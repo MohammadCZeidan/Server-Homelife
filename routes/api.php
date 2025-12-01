@@ -14,6 +14,8 @@ use App\Http\Controllers\NutritionController;
 use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\AIController;
+use App\Http\Controllers\N8nController;
+use App\Http\Controllers\N8nNotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +44,11 @@ Route::prefix('v0.1')->group(function () {
         Route::post('/profile/update', [AuthController::class, 'updateProfile']);
     });
 
+    // Admin routes - Get all users with roles
+    Route::prefix('users')->middleware(['auth:api', 'admin.only'])->group(function () {
+        Route::get('/', [AuthController::class, 'getAllUsers']);
+    });
+
     // Protected household routes
     Route::prefix('household')->middleware('auth:api')->group(function () {
         Route::get('/', [HouseholdController::class, 'get']);
@@ -51,7 +58,7 @@ Route::prefix('v0.1')->group(function () {
     });
 
     // Protected pantry routes
-    Route::prefix('pantry')->middleware('auth:api')->group(function () {
+    Route::prefix('pantry')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/', [PantryController::class, 'getAll']);
         Route::post('/', [PantryController::class, 'create']);
         Route::post('/{id}/update', [PantryController::class, 'update']);
@@ -64,7 +71,7 @@ Route::prefix('v0.1')->group(function () {
     });
 
     // Protected recipe routes
-    Route::prefix('recipes')->middleware('auth:api')->group(function () {
+    Route::prefix('recipes')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/', [RecipeController::class, 'getAll']);
         Route::get('/suggestions', [RecipeController::class, 'getSuggestionsFromPantry']); // Must come before /{id}
         Route::get('/{id}', [RecipeController::class, 'get']);
@@ -75,7 +82,7 @@ Route::prefix('v0.1')->group(function () {
     });
 
     // Protected meal plan routes
-    Route::prefix('meal-plans')->middleware('auth:api')->group(function () {
+    Route::prefix('meal-plans')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/', [MealPlanController::class, 'getWeeklyPlan']);
         Route::post('/', [MealPlanController::class, 'createWeeklyPlan']);
         Route::post('/{weekId}/meals', [MealPlanController::class, 'addMeal']);
@@ -83,7 +90,7 @@ Route::prefix('v0.1')->group(function () {
     });
 
     // Protected shopping list routes
-    Route::prefix('shopping-lists')->middleware('auth:api')->group(function () {
+    Route::prefix('shopping-lists')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/', [ShoppingListController::class, 'getAll']);
         Route::get('/{id}', [ShoppingListController::class, 'get']);
         Route::post('/', [ShoppingListController::class, 'create']);
@@ -96,7 +103,7 @@ Route::prefix('v0.1')->group(function () {
     });
 
     // Protected expense routes
-    Route::prefix('expenses')->middleware('auth:api')->group(function () {
+    Route::prefix('expenses')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/', [ExpenseController::class, 'getAll']);
         Route::get('/{id}', [ExpenseController::class, 'get']);
         Route::post('/', [ExpenseController::class, 'create']);
@@ -106,7 +113,7 @@ Route::prefix('v0.1')->group(function () {
     });
 
     // Protected ingredient routes
-    Route::prefix('ingredients')->middleware('auth:api')->group(function () {
+    Route::prefix('ingredients')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/', [IngredientController::class, 'getAll']);
         Route::get('/{id}', [IngredientController::class, 'get']);
         Route::post('/', [IngredientController::class, 'create']);
@@ -119,18 +126,18 @@ Route::prefix('v0.1')->group(function () {
     });
 
     // Protected nutrition routes
-    Route::prefix('nutrition')->middleware('auth:api')->group(function () {
+    Route::prefix('nutrition')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/recipes/{recipeId}', [NutritionController::class, 'getRecipeNutrition']);
         Route::get('/weeks/{weekId}', [NutritionController::class, 'getWeeklyNutrition']);
     });
 
     // Protected insights routes
-    Route::prefix('insights')->middleware('auth:api')->group(function () {
+    Route::prefix('insights')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::get('/weekly', [InsightsController::class, 'getWeeklyInsights']);
     });
 
     // Protected AI routes
-    Route::prefix('ai')->middleware('auth:api')->group(function () {
+    Route::prefix('ai')->middleware(['auth:api', 'household.required'])->group(function () {
         Route::post('/generate-seed-data', [AIController::class, 'generateSeedData']);
         Route::get('/recipe-suggestions', [AIController::class, 'getRecipeSuggestionsFromPantry']);
         Route::get('/substitutions/{ingredientId}', [AIController::class, 'getSmartSubstitutions']);
@@ -139,6 +146,24 @@ Route::prefix('v0.1')->group(function () {
     // Webhook routes (for n8n - no auth required, but should use webhook secret)
     Route::prefix('webhooks')->group(function () {
         Route::post('/meal-plan-updated', [WebhookController::class, 'mealPlanUpdated']);
+    });
+
+    // N8N Integration routes (use API key authentication instead of JWT)
+    Route::prefix('n8n')->group(function () {
+        // WF1: Daily Expiry Alerts
+        Route::get('/households/{householdId}/pantry/expiring', [N8nController::class, 'getExpiringItems']);
+        
+        // WF2: Weekly Meal Plan Draft
+        Route::get('/households/{householdId}/pantry', [N8nController::class, 'getPantryItems']);
+        Route::get('/households/{householdId}/recipes', [N8nController::class, 'getRecipes']);
+        Route::post('/households/{householdId}/meal-plans', [N8nController::class, 'createMealPlan']);
+        Route::post('/households/{householdId}/meal-plans/{weekId}/meals', [N8nController::class, 'addMealToPlan']);
+        
+        // Get household users (for notifications)
+        Route::get('/households/{householdId}/users', [N8nController::class, 'getHouseholdUsers']);
+        
+        // Notification endpoint
+        Route::post('/send-notification', [N8nNotificationController::class, 'sendNotification']);
     });
 });
 

@@ -16,6 +16,19 @@ class WebhookController extends Controller
 
     function mealPlanUpdated(Request $request)
     {
+        // Validate webhook secret for security
+        $webhookSecret = env('N8N_WEBHOOK_SECRET');
+        if ($webhookSecret) {
+            $providedSecret = $request->header('X-Webhook-Secret') ?? $request->input('secret');
+            if ($providedSecret !== $webhookSecret) {
+                return response()->json([
+                    'status' => 'failure',
+                    'payload' => null,
+                    'message' => 'Invalid webhook secret'
+                ], 401);
+            }
+        }
+
         $request->validate([
             'week_id' => 'required|exists:weeks,id',
         ]);
