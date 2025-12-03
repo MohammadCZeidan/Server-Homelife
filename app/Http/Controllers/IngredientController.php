@@ -3,70 +3,51 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
 use App\Services\IngredientService;
 use App\Models\Ingredient;
 
 class IngredientController extends Controller
 {
-    private $ingredientService;
+    private IngredientService $ingredientService;
 
-    function __construct(IngredientService $ingredientService)
+    public function __construct(IngredientService $ingredientService)
     {
         $this->ingredientService = $ingredientService;
     }
 
-    function getAll(Request $request)
+    public function getAll(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        if (!$user->household_id) {
-            return response()->json([
-                "status" => "failure",
-                "payload" => null,
-                "message" => "You must create or join a household first. Use POST /api/v0.1/household to create one."
-            ], 400);
-        }
-
+        $householdId = $request->get('household_id');
         $search = $request->get('search');
-        $ingredients = $this->ingredientService->getAll($user->household_id, $search);
+        
+        if (!$householdId) {
+            $ingredients = \App\Models\Ingredient::with('unit')
+                ->when($search, function ($query, $search) {
+                    return $query->where('name', 'like', "%{$search}%");
+                })
+                ->get();
+        } else {
+            $ingredients = $this->ingredientService->getAll($householdId, $search);
+        }
+        
         return $this->responseJSON($ingredients);
     }
 
-    function get($id)
+    public function get($id): JsonResponse
     {
-        $user = Auth::user();
-        if (!$user->household_id) {
-            return response()->json([
-                "status" => "failure",
-                "payload" => null,
-                "message" => "You must create or join a household first. Use POST /api/v0.1/household to create one."
-            ], 400);
-        }
-
-        $ingredient = $this->ingredientService->get($id, $user->household_id);
+        $ingredient = \App\Models\Ingredient::with('unit')->find($id);
         if (!$ingredient) {
             return $this->responseJSON(null, "failure", 404);
         }
         return $this->responseJSON($ingredient);
     }
 
-    function create(Request $request)
+    public function create(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        if (!$user->household_id) {
-            return response()->json([
-                "status" => "failure",
-                "payload" => null,
-                "message" => "You must create or join a household first. Use POST /api/v0.1/household to create one."
-            ], 400);
-        }
-
         $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
+            'name' => 'required|string|max:255',
+            'household_id' => 'required|exists:households,id',
             'calories' => 'nullable|numeric|min:0',
             'protein' => 'nullable|numeric|min:0',
             'carbs' => 'nullable|numeric|min:0',
@@ -74,25 +55,23 @@ class IngredientController extends Controller
             'unit_id' => 'nullable|exists:units,id',
         ]);
 
-        // Check if ingredient already exists (idempotent operation)
+        $householdId = $request->household_id;
+
         $existingIngredient = Ingredient::where('name', $request->name)
-            ->where('household_id', $user->household_id)
+            ->where('household_id', $householdId)
             ->first();
 
         if ($existingIngredient) {
-            // If unit_id is provided and different, update it
             if ($request->has('unit_id') && $request->unit_id != $existingIngredient->unit_id) {
                 $existingIngredient->unit_id = $request->unit_id;
                 $existingIngredient->save();
             }
             
-            // Load unit relationship and return existing ingredient
             $existingIngredient->load('unit');
             return $this->responseJSON($existingIngredient);
         }
 
-        // Create new ingredient if it doesn't exist
-        $ingredient = $this->ingredientService->create($user->household_id, $request->all());
+        $ingredient = $this->ingredientService->create($householdId, $request->all());
         return $this->responseJSON($ingredient);
     }
 }

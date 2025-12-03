@@ -3,30 +3,27 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\MealPlanService;
+use App\Models\Recipe;
 
 class MealPlanController extends Controller
 {
-    private $mealPlanService;
+    private MealPlanService $mealPlanService;
 
-    function __construct(MealPlanService $mealPlanService)
+    public function __construct(MealPlanService $mealPlanService)
     {
         $this->mealPlanService = $mealPlanService;
     }
 
-    function getWeeklyPlan(Request $request)
+    public function getWeeklyPlan(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
 
-        // Accept both 'weekStartDate' and 'start_date' query parameters
         $weekStartDate = $request->get('weekStartDate') ?? $request->get('start_date');
         $week = $this->mealPlanService->getWeeklyPlan($user->household_id, $weekStartDate);
         
-        // Return empty week structure instead of 404 if week doesn't exist
         if (!$week) {
             return $this->responseJSON([
                 'id' => null,
@@ -39,27 +36,21 @@ class MealPlanController extends Controller
         return $this->responseJSON($week);
     }
 
-    function createWeeklyPlan(Request $request)
+    public function createWeeklyPlan(Request $request): JsonResponse
     {
         $request->validate([
             'start_date' => 'required|date',
         ]);
 
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
-
         $week = $this->mealPlanService->createWeeklyPlan($user->household_id, $request->start_date);
         return $this->responseJSON($week);
     }
 
-    function addMeal(Request $request, $weekId)
+    public function addMeal(Request $request, $weekId): JsonResponse
     {
-        // Accept both 'slot' and 'meal_type' field names
         $slot = $request->input('slot') ?? $request->input('meal_type');
         
-        // Handle day as integer or string (e.g., "monday" -> 1)
         $day = $request->input('day');
         $dayValue = $day;
         if (is_string($day)) {
@@ -71,30 +62,17 @@ class MealPlanController extends Controller
         }
 
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 400);
-        }
 
-        // Custom validation: ensure at least one of slot or meal_type is provided
         if (!$slot) {
-            return response()->json([
-                'status' => 'failure',
-                'payload' => null,
-                'message' => 'Either "slot" or "meal_type" is required. Must be: breakfast, lunch, dinner, or snack'
-            ], 422);
+            return $this->responseJSON(null, "failure", 422);
         }
 
-        // Validate recipe exists and belongs to household
-        $recipe = \App\Models\Recipe::where('id', $request->recipe_id)
+        $recipe = Recipe::where('id', $request->recipe_id)
             ->where('household_id', $user->household_id)
             ->first();
 
         if (!$recipe && $request->recipe_id) {
-            return response()->json([
-                'status' => 'failure',
-                'payload' => null,
-                'message' => 'The selected recipe does not exist or does not belong to your household'
-            ], 422);
+            return $this->responseJSON(null, "failure", 422);
         }
 
         $request->validate([
@@ -105,28 +83,13 @@ class MealPlanController extends Controller
             'recipe_id.required' => 'Recipe ID is required',
         ]);
 
-        // Validate slot value
         if (!in_array($slot, ['breakfast', 'lunch', 'dinner', 'snack'])) {
-            return response()->json([
-                'status' => 'failure',
-                'payload' => null,
-                'message' => 'Slot/meal_type must be one of: breakfast, lunch, dinner, snack'
-            ], 422);
+            return $this->responseJSON(null, "failure", 422);
         }
 
-        // Validate day value (0-6)
         $finalDay = (int)$dayValue;
         if ($finalDay < 0 || $finalDay > 6) {
-            return response()->json([
-                'status' => 'failure',
-                'payload' => null,
-                'message' => 'Day must be between 0-6 (0=Sunday, 1=Monday, ..., 6=Saturday)'
-            ], 422);
-        }
-
-        $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 400);
+            return $this->responseJSON(null, "failure", 422);
         }
 
         $meal = $this->mealPlanService->addMeal(
@@ -144,7 +107,7 @@ class MealPlanController extends Controller
         return $this->responseJSON($meal);
     }
 
-    function removeMeal($weekId, $mealId)
+    public function removeMeal($weekId, $mealId): JsonResponse
     {
         $user = Auth::user();
         $deleted = $this->mealPlanService->removeMeal($weekId, $user->household_id, $mealId);

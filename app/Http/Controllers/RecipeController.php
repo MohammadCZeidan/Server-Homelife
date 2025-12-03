@@ -3,22 +3,26 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Exception;
 use App\Services\RecipeService;
 use App\Services\AIService;
 use App\Services\IngredientService;
 use App\Services\UnitService;
 use App\Models\Ingredient;
 use App\Models\Unit;
+use App\Models\Inventory;
 
 class RecipeController extends Controller
 {
-    private $recipeService;
-    private $aiService;
-    private $ingredientService;
-    private $unitService;
+    private RecipeService $recipeService;
+    private AIService $aiService;
+    private IngredientService $ingredientService;
+    private UnitService $unitService;
 
-    function __construct(RecipeService $recipeService, AIService $aiService, IngredientService $ingredientService, UnitService $unitService)
+    public function __construct(RecipeService $recipeService, AIService $aiService, IngredientService $ingredientService, UnitService $unitService)
     {
         $this->recipeService = $recipeService;
         $this->aiService = $aiService;
@@ -26,17 +30,13 @@ class RecipeController extends Controller
         $this->unitService = $unitService;
     }
 
-    /**
-     * Helper function to find or create a unit by abbreviation
-     */
-    private function findOrCreateUnit($unitAbbreviation)
+    private function findOrCreateUnit(string $unitAbbreviation): Unit
     {
         $unit = Unit::where('abbreviation', $unitAbbreviation)
             ->orWhere('name', $unitAbbreviation)
             ->first();
         
         if (!$unit) {
-            // Create unit if it doesn't exist
             $unitNameMap = [
                 'g' => 'Gram',
                 'kg' => 'Kilogram',
@@ -59,18 +59,14 @@ class RecipeController extends Controller
         return $unit;
     }
 
-    function getAll(Request $request)
+    public function getAll(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON([], "failure", 404);
-        }
-
         $recipes = $this->recipeService->getAll($user->household_id);
         return $this->responseJSON($recipes);
     }
 
-    function get($id)
+    public function get($id): JsonResponse
     {
         $user = Auth::user();
         $recipe = $this->recipeService->get($id, $user->household_id);
@@ -82,12 +78,9 @@ class RecipeController extends Controller
         return $this->responseJSON($recipe);
     }
 
-    function create(Request $request)
+    public function create(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
 
         // Validate basic recipe fields first
         $request->validate([
@@ -140,11 +133,7 @@ class RecipeController extends Controller
                     }
                     $ingredientId = $foundIngredient->id;
                 } else {
-                    return response()->json([
-                        'status' => 'failure',
-                        'payload' => null,
-                        'message' => "Ingredient at index {$index} must have either 'ingredient_id' or 'ingredient'/'name' field."
-                    ], 422);
+                    return $this->responseJSON(null, "failure", 422);
                 }
 
                 // Get unit_id: use provided one, or find/create by abbreviation, or fall back to ingredient's default unit_id
@@ -173,21 +162,13 @@ class RecipeController extends Controller
                     ->exists();
 
                 if (!$ingredientExists) {
-                    return response()->json([
-                        'status' => 'failure',
-                        'payload' => null,
-                        'message' => "Ingredient ID {$ingredientId} does not belong to your household."
-                    ], 422);
+                    return $this->responseJSON(null, "failure", 422);
                 }
 
                 // Verify unit exists (should always be true since we just created it if needed)
                 $unitExists = Unit::where('id', $unitId)->exists();
                 if (!$unitExists) {
-                    return response()->json([
-                        'status' => 'failure',
-                        'payload' => null,
-                        'message' => "Unit ID {$unitId} does not exist."
-                    ], 422);
+                    return $this->responseJSON(null, "failure", 422);
                 }
 
                 $processedIngredients[] = [
@@ -205,22 +186,15 @@ class RecipeController extends Controller
         try {
             $recipe = $this->recipeService->create($user->household_id, $requestData);
             return $this->responseJSON($recipe);
-        } catch (\Exception $e) {
-            \Log::error('Recipe creation failed: ' . $e->getMessage());
-            return response()->json([
-                'status' => 'failure',
-                'payload' => null,
-                'message' => 'Failed to create recipe: ' . $e->getMessage()
-            ], 500);
+        } catch (Exception $e) {
+            Log::error('Recipe creation failed: ' . $e->getMessage());
+            return $this->responseJSON(null, "failure", 500);
         }
     }
 
-    function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
 
         $request->validate([
             'title' => 'nullable|string|max:255',
@@ -271,11 +245,7 @@ class RecipeController extends Controller
                     }
                     $ingredientId = $foundIngredient->id;
                 } else {
-                    return response()->json([
-                        'status' => 'failure',
-                        'payload' => null,
-                        'message' => "Ingredient at index {$index} must have either 'ingredient_id' or 'ingredient'/'name' field."
-                    ], 422);
+                    return $this->responseJSON(null, "failure", 422);
                 }
 
                 // Get unit_id: use provided one, or find/create by abbreviation, or fall back to ingredient's default unit_id
@@ -304,21 +274,13 @@ class RecipeController extends Controller
                     ->exists();
 
                 if (!$ingredientExists) {
-                    return response()->json([
-                        'status' => 'failure',
-                        'payload' => null,
-                        'message' => "Ingredient ID {$ingredientId} does not belong to your household."
-                    ], 422);
+                    return $this->responseJSON(null, "failure", 422);
                 }
 
                 // Verify unit exists (should always be true since we just created it if needed)
                 $unitExists = Unit::where('id', $unitId)->exists();
                 if (!$unitExists) {
-                    return response()->json([
-                        'status' => 'failure',
-                        'payload' => null,
-                        'message' => "Unit ID {$unitId} does not exist."
-                    ], 422);
+                    return $this->responseJSON(null, "failure", 422);
                 }
 
                 $processedIngredients[] = [
@@ -344,7 +306,7 @@ class RecipeController extends Controller
         return $this->responseJSON($recipe);
     }
 
-    function delete($id)
+    public function delete($id): JsonResponse // Deletes a recipe (must belong to user's household)
     {
         $user = Auth::user();
         $deleted = $this->recipeService->delete($id, $user->household_id);
@@ -356,13 +318,9 @@ class RecipeController extends Controller
         return $this->responseJSON(null, "success");
     }
 
-    function getSuggestionsFromPantry(Request $request)
+    public function getSuggestionsFromPantry(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON([], "failure", 404);
-        }
-
         $limit = $request->get('limit', 5);
         $useAI = $request->get('use_ai', false);
 
@@ -375,37 +333,30 @@ class RecipeController extends Controller
         return $this->responseJSON($recipes);
     }
 
-    function getSubstitutions(Request $request, $id)
+    public function getSubstitutions(Request $request, $id): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON([], "failure", 404);
-        }
 
-        // Get recipe and find missing ingredients
         $recipe = $this->recipeService->get($id, $user->household_id);
         if (!$recipe) {
             return $this->responseJSON([], "failure", 404);
         }
 
-        // Get all recipe ingredients
         $recipeIngredientIds = $recipe->ingredients->pluck('id')->toArray();
         
-        // Get pantry ingredients
-        $pantryIngredientIds = \App\Models\Inventory::where('household_id', $user->household_id)
+        $pantryIngredientIds = Inventory::where('household_id', $user->household_id)
             ->where('quantity', '>', 0)
             ->pluck('ingredient_id')
             ->unique()
             ->toArray();
 
-        // Find missing ingredients
         $missingIngredientIds = array_diff($recipeIngredientIds, $pantryIngredientIds);
         
         $substitutions = [];
         foreach ($missingIngredientIds as $missingId) {
             $sub = $this->aiService->getSmartSubstitutions($missingId, $user->household_id);
             if (!empty($sub)) {
-                $ingredient = \App\Models\Ingredient::where('household_id', $user->household_id)->find($missingId);
+                $ingredient = Ingredient::where('household_id', $user->household_id)->find($missingId);
                 $substitutions[] = [
                     'missing_ingredient' => $ingredient ? $ingredient->name : 'Unknown',
                     'substitution' => $sub['substitution'] ?? 'No substitution found',

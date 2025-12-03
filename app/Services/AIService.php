@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Inventory;
 use App\Models\Recipe;
+use Exception;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class AIService
 {
@@ -58,8 +60,8 @@ class AIService
                 $recipeNames = array_filter(explode("\n", $suggestions));
                 return array_slice($recipeNames, 0, $limit);
             }
-        } catch (\Exception $e) {
-            \Log::error('AI Service Error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('AI Service Error: ' . $e->getMessage());
         }
 
         return $this->getBasicSuggestions($householdId, $limit);
@@ -108,8 +110,8 @@ class AIService
                 $suggestion = $response->json()['choices'][0]['message']['content'];
                 return ['substitution' => trim($suggestion)];
             }
-        } catch (\Exception $e) {
-            \Log::error('AI Service Error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('AI Service Error: ' . $e->getMessage());
         }
 
         return [];
@@ -219,15 +221,12 @@ Return ONLY valid JSON, no other text.";
                 'ingredients' => $ingredients,
                 'recipes' => $recipes,
             ];
-        } catch (\Exception $e) {
-            \Log::error('AI Seed Data Generation Error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('AI Seed Data Generation Error: ' . $e->getMessage());
             return $this->getFallbackSeedData($householdId);
         }
     }
 
-    /**
-     * Fallback seed data if AI is not available
-     */
     private function getFallbackSeedData($householdId)
     {
         return [

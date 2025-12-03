@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Exception;
 use App\Services\AIService;
 use App\Services\IngredientService;
 use App\Services\UnitService;
@@ -12,16 +15,16 @@ use App\Services\PantryService;
 use App\Models\Ingredient;
 use App\Models\Unit;
 use App\Models\Inventory;
+use App\Models\Recipe;
 
-class AIController extends Controller
-{
-    private $aiService;
-    private $ingredientService;
-    private $unitService;
-    private $recipeService;
-    private $pantryService;
+class AIController extends Controller{
+    private AIService $aiService;
+    private IngredientService $ingredientService;
+    private UnitService $unitService;
+    private RecipeService $recipeService;
+    private PantryService $pantryService;
 
-    function __construct(
+    public function __construct(
         AIService $aiService,
         IngredientService $ingredientService,
         UnitService $unitService,
@@ -35,35 +38,22 @@ class AIController extends Controller
         $this->pantryService = $pantryService;
     }
 
-    /**
-     * Generate seed data using AI
-     */
-    function generateSeedData(Request $request)
+    public function generateSeedData(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
-
         $householdId = $user->household_id;
-
-        // Get AI-generated seed data
         $seedData = $this->aiService->generateSeedData($householdId);
-
         $created = [
             'ingredients' => 0,
             'recipes' => 0,
             'pantry_items' => 0,
         ];
-
-        // Create ingredients with nutrition
+        
         foreach ($seedData['ingredients'] ?? [] as $ingredientData) {
             try {
-                // Find or create unit
                 $unit = Unit::where('abbreviation', $ingredientData['unit'] ?? 'g')
-                    ->orWhere('name', ucfirst($ingredientData['unit'] ?? 'g'))//returns first letter as an uppercase
+                    ->orWhere('name', ucfirst($ingredientData['unit'] ?? 'g'))
                     ->first();
-
                 if (!$unit) {
                     $unit = $this->unitService->create([
                         'name' => ucfirst($ingredientData['unit'] ?? 'Gram'),
@@ -71,7 +61,6 @@ class AIController extends Controller
                     ]);
                 }
 
-                // Check if ingredient already exists
                 $existing = Ingredient::where('name', $ingredientData['name'])
                     ->where('household_id', $householdId)
                     ->first();
@@ -87,15 +76,13 @@ class AIController extends Controller
                     ]);
                     $created['ingredients']++;
                 }
-            } catch (\Exception $e) {
-                \Log::error('Failed to create ingredient: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Failed to create ingredient: ' . $e->getMessage());
             }
         }
 
-        // Create recipes
         foreach ($seedData['recipes'] ?? [] as $recipeData) {
             try {
-                // Process ingredients
                 $processedIngredients = [];
                 foreach ($recipeData['ingredients'] ?? [] as $ing) {
                     $ingredient = Ingredient::where('name', $ing['name'])
@@ -122,8 +109,7 @@ class AIController extends Controller
                     }
                 }
 
-                // Check if recipe already exists
-                $existing = \App\Models\Recipe::where('title', $recipeData['title'])
+                $existing = Recipe::where('title', $recipeData['title'])
                     ->where('household_id', $householdId)
                     ->first();
 
@@ -139,12 +125,11 @@ class AIController extends Controller
                     ]);
                     $created['recipes']++;
                 }
-            } catch (\Exception $e) {
-                \Log::error('Failed to create recipe: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Failed to create recipe: ' . $e->getMessage());
             }
         }
 
-        // Add some ingredients to pantry
         $ingredients = Ingredient::where('household_id', $householdId)->limit(10)->get();
         foreach ($ingredients as $ingredient) {
             try {
@@ -156,8 +141,8 @@ class AIController extends Controller
                     'location' => 'pantry',
                 ]);
                 $created['pantry_items']++;
-            } catch (\Exception $e) {
-                \Log::error('Failed to create pantry item: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error('Failed to create pantry item: ' . $e->getMessage());
             }
         }
 
@@ -167,16 +152,9 @@ class AIController extends Controller
         ]);
     }
 
-    /**
-     * Get recipe suggestions from pantry (enhanced with full recipe details)
-     */
-    function getRecipeSuggestionsFromPantry(Request $request)
+    public function getRecipeSuggestionsFromPantry(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON([], "failure", 404);
-        }
-
         $limit = $request->get('limit', 5);
         $useAI = $request->get('use_ai', true);
 
@@ -185,20 +163,13 @@ class AIController extends Controller
             return $this->responseJSON(['suggestions' => $suggestions, 'source' => 'ai']);
         }
 
-        $recipes = \App\Services\RecipeService::getSuggestionsFromPantry($user->household_id, $limit);
+        $recipes = $this->recipeService->getSuggestionsFromPantry($user->household_id, $limit);
         return $this->responseJSON($recipes);
     }
 
-    /**
-     * Get smart substitutions for missing ingredients
-     */
-    function getSmartSubstitutions(Request $request, $ingredientId)
+    public function getSmartSubstitutions(Request $request, $ingredientId): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON([], "failure", 404);
-        }
-
         $substitution = $this->aiService->getSmartSubstitutions($ingredientId, $user->household_id);
         return $this->responseJSON($substitution);
     }
