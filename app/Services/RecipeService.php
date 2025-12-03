@@ -10,6 +10,8 @@ use App\Models\ShoppingList;
 use App\Models\ShoppingListItem;
 use App\Services\PantryService;
 use App\Services\ShoppingListService;
+use Exception;
+use Illuminate\Support\Facades\Log;
 
 class RecipeService
 {
@@ -118,35 +120,29 @@ class RecipeService
                                 'expiry_date' => null,
                                 'location' => null,
                             ]);
-                        } catch (\Exception $e) {
-                            \Log::warning('Failed to add ingredient to pantry when creating recipe: ' . $e->getMessage());
+                        } catch (Exception $e) {
+                            Log::warning('Failed to add ingredient to pantry when creating recipe: ' . $e->getMessage());
                         }
 
-                        // Automatically add ingredient to shopping list
                         try {
-                            // Get or create an active shopping list for the household
                             $shoppingList = ShoppingList::where('household_id', $householdId)
                                 ->where('is_completed', false)
                                 ->orderBy('created_at', 'desc')
                                 ->first();
 
                             if (!$shoppingList) {
-                                // Create a new shopping list if none exists
                                 $shoppingList = $this->shoppingListService->create($householdId, 'Shopping List - ' . date('Y-m-d'));
                             }
 
-                            // Check if item already exists in shopping list (same ingredient and unit)
                             $existingItem = ShoppingListItem::where('shopping_list_id', $shoppingList->id)
                                 ->where('ingredient_id', $ingredientData['ingredient_id'])
                                 ->where('unit_id', $ingredientData['unit_id'])
                                 ->first();
 
                             if ($existingItem) {
-                                // Merge quantities if duplicate exists
                                 $existingItem->quantity += $ingredientData['quantity'];
                                 $existingItem->save();
                             } else {
-                                // Add new item to shopping list
                                 $this->shoppingListService->addItem(
                                     $shoppingList->id,
                                     $householdId,
@@ -155,8 +151,8 @@ class RecipeService
                                     $ingredientData['unit_id']
                                 );
                             }
-                        } catch (\Exception $e) {
-                            \Log::warning('Failed to add ingredient to shopping list when creating recipe: ' . $e->getMessage());
+                        } catch (Exception $e) {
+                            Log::warning('Failed to add ingredient to shopping list when creating recipe: ' . $e->getMessage());
                         }
                     }
                 }
@@ -164,17 +160,16 @@ class RecipeService
 
             $recipe->load('ingredients');
             
-            // Format ingredients to include name and unit name
             $recipe->ingredients = $recipe->ingredients->map(function ($ingredient) {
                 $unit = Unit::find($ingredient->pivot->unit_id);
                 return [
                     'id' => $ingredient->id,
                     'name' => $ingredient->name,
-                    'ingredient_name' => $ingredient->name, // Alias for easier access
+                    'ingredient_name' => $ingredient->name,
                     'quantity' => $ingredient->pivot->quantity,
                     'unit_id' => $ingredient->pivot->unit_id,
-                    'unit_name' => $unit ? $unit->name : null, // Direct unit name
-                    'unit_abbreviation' => $unit ? $unit->abbreviation : null, // Direct unit abbreviation
+                    'unit_name' => $unit ? $unit->name : null,
+                    'unit_abbreviation' => $unit ? $unit->abbreviation : null,
                     'unit' => $unit ? [
                         'id' => $unit->id,
                         'name' => $unit->name,
@@ -184,8 +179,8 @@ class RecipeService
             });
             
             return $recipe;
-        } catch (\Exception $e) {
-            \Log::error('Recipe creation error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Recipe creation error: ' . $e->getMessage());
             throw $e;
         }
     }

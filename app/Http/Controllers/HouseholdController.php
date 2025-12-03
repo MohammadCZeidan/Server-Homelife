@@ -6,8 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\HouseholdService;
 
-class HouseholdController extends Controller
-{
+class HouseholdController extends Controller{
     private $householdService;
 
     function __construct(HouseholdService $householdService)

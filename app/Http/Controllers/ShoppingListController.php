@@ -3,30 +3,27 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\ShoppingListService;
 
 class ShoppingListController extends Controller
 {
-    private $shoppingListService;
+    private ShoppingListService $shoppingListService;
 
-    function __construct(ShoppingListService $shoppingListService)
+    public function __construct(ShoppingListService $shoppingListService)
     {
         $this->shoppingListService = $shoppingListService;
     }
 
-    function getAll(Request $request)
+    public function getAll(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON([], "failure", 404);
-        }
-
         $lists = $this->shoppingListService->getAll($user->household_id);
         return $this->responseJSON($lists);
     }
 
-    function get($id)
+    public function get($id): JsonResponse
     {
         $user = Auth::user();
         $list = $this->shoppingListService->get($id, $user->household_id);
@@ -38,7 +35,7 @@ class ShoppingListController extends Controller
         return $this->responseJSON($list);
     }
 
-    function create(Request $request)
+    public function create(Request $request): JsonResponse
     {
         $request->validate([
             'title' => 'required|string|max:255',
@@ -46,15 +43,11 @@ class ShoppingListController extends Controller
         ]);
 
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
-
         $list = $this->shoppingListService->create($user->household_id, $request->title, $request->week_id);
         return $this->responseJSON($list);
     }
 
-    function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         $request->validate([
             'title' => 'nullable|string|max:255',
@@ -71,7 +64,7 @@ class ShoppingListController extends Controller
         return $this->responseJSON($list);
     }
 
-    function delete($id)
+    public function delete($id): JsonResponse
     {
         $user = Auth::user();
         $deleted = $this->shoppingListService->delete($id, $user->household_id);
@@ -83,7 +76,7 @@ class ShoppingListController extends Controller
         return $this->responseJSON(null, "success");
     }
 
-    function addItem(Request $request, $id)
+    public function addItem(Request $request, $id): JsonResponse
     {
         $request->validate([
             'ingredient_id' => 'required|exists:ingredients,id',
@@ -107,7 +100,7 @@ class ShoppingListController extends Controller
         return $this->responseJSON($item);
     }
 
-    function updateItem(Request $request, $id, $itemId)
+    public function updateItem(Request $request, $id, $itemId): JsonResponse
     {
         $request->validate([
             'quantity' => 'nullable|numeric|min:0',
@@ -124,7 +117,7 @@ class ShoppingListController extends Controller
         return $this->responseJSON($item);
     }
 
-    function deleteItem($id, $itemId)
+    public function deleteItem($id, $itemId): JsonResponse
     {
         $user = Auth::user();
         $deleted = $this->shoppingListService->deleteItem($id, $user->household_id, $itemId);
@@ -136,7 +129,7 @@ class ShoppingListController extends Controller
         return $this->responseJSON(null, "success");
     }
 
-    function generateFromMealPlan(Request $request)
+    public function generateFromMealPlan(Request $request): JsonResponse
     {
         $request->validate([
             'week_id' => 'required|exists:weeks,id',

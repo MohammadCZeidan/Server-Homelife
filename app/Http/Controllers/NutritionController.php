@@ -2,20 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\NutritionService;
 
 class NutritionController extends Controller
 {
-    private $nutritionService;
+    private NutritionService $nutritionService;
 
-    function __construct(NutritionService $nutritionService)
+    public function __construct(NutritionService $nutritionService)
     {
         $this->nutritionService = $nutritionService;
     }
 
-    function getRecipeNutrition($recipeId)
+    public function getRecipeNutrition($recipeId): JsonResponse
     {
         $user = Auth::user();
         $nutrition = $this->nutritionService->getRecipeNutrition($recipeId, $user->household_id);
@@ -27,7 +27,7 @@ class NutritionController extends Controller
         return $this->responseJSON($nutrition);
     }
 
-    function getWeeklyNutrition($weekId)
+    public function getWeeklyNutrition($weekId): JsonResponse
     {
         $user = Auth::user();
         $nutrition = $this->nutritionService->getWeeklyNutrition($weekId, $user->household_id);
