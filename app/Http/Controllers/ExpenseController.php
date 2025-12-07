@@ -3,30 +3,26 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\ExpenseService;
 
 class ExpenseController extends Controller
 {
-    private $expenseService;
+    private ExpenseService $expenseService;
 
-    function __construct(ExpenseService $expenseService)
+    public function __construct(ExpenseService $expenseService)
     {
         $this->expenseService = $expenseService;
     }
 
-    function getAll(Request $request)
-    {
+    public function getAll(Request $request): JsonResponse{
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON([], "failure", status_code: 404);
-        }
-
         $expenses = $this->expenseService->getAll($user->household_id);
         return $this->responseJSON($expenses);
     }
 
-    function get($id)
+    public function get($id): JsonResponse
     {
         $user = Auth::user();
         $expense = $this->expenseService->get($id, $user->household_id);
@@ -38,36 +34,18 @@ class ExpenseController extends Controller
         return $this->responseJSON($expense);
     }
 
-    function create(Request $request)
+    public function create(Request $request): JsonResponse
     {
-        $request->validate([
-            'store' => 'nullable|string|max:255',                                                    
-            'receipt_link' => 'nullable|url|max:255',
-            'amount' => 'required|numeric|min:0',
-            'date' => 'required|date',
-            'category' => 'nullable|string|max:255',
-            'note' => 'nullable|string',
-        ]);
+        $this->validateRequest($request, 'create');
 
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
-
         $expense = $this->expenseService->create($user->household_id, $request->all());
         return $this->responseJSON($expense);
     }
 
-    function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
-        $request->validate([
-            'store' => 'nullable|string|max:255',
-            'receipt_link' => 'nullable|url|max:255',
-            'amount' => 'nullable|numeric|min:0',
-            'date' => 'nullable|date',
-            'category' => 'nullable|string|max:255',
-            'note' => 'nullable|string',
-        ]);
+        $this->validateRequest($request, 'update');
 
         $user = Auth::user();
         $expense = $this->expenseService->update($id, $user->household_id, $request->all());
@@ -79,8 +57,7 @@ class ExpenseController extends Controller
         return $this->responseJSON($expense);
     }
 
-    function delete($id)
-    {
+    public function delete($id): JsonResponse{
         $user = Auth::user();
         $deleted = $this->expenseService->delete($id, $user->household_id);
         
@@ -91,13 +68,9 @@ class ExpenseController extends Controller
         return $this->responseJSON(null, "success");
     }
 
-    function getSummary(Request $request)
+    public function getSummary(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if (!$user->household_id) {
-            return $this->responseJSON(null, "failure", 404);
-        }
-
         $period = $request->get('period', 'week');
         $summary = $this->expenseService->getSummary($user->household_id, $period);
         return $this->responseJSON($summary);

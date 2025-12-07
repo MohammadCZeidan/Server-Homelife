@@ -13,7 +13,6 @@ use App\Http\Controllers\UnitController;
 use App\Http\Controllers\NutritionController;
 use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\WebhookController;
-use App\Http\Controllers\AIController;
 use App\Http\Controllers\N8nController;
 use App\Http\Controllers\N8nNotificationController;
 
@@ -68,6 +67,7 @@ Route::prefix('v0.1')->group(function () {
         Route::post('/{id}/consume', [PantryController::class, 'consume']);
         Route::get('/expiring', [PantryController::class, 'getExpiringSoon']);
         Route::post('/merge-duplicates', [PantryController::class, 'mergeDuplicates']);
+        Route::post('/send-expiring-email', [PantryController::class, 'sendExpiringItemsEmail']); // Send expiring items email via n8n
     });
 
     // Protected recipe routes
@@ -136,12 +136,6 @@ Route::prefix('v0.1')->group(function () {
         Route::get('/weekly', [InsightsController::class, 'getWeeklyInsights']);
     });
 
-    // Protected AI routes
-    Route::prefix('ai')->middleware(['auth:api', 'household.required'])->group(function () {
-        Route::post('/generate-seed-data', [AIController::class, 'generateSeedData']);
-        Route::get('/recipe-suggestions', [AIController::class, 'getRecipeSuggestionsFromPantry']);
-        Route::get('/substitutions/{ingredientId}', [AIController::class, 'getSmartSubstitutions']);
-    });
 
     // Webhook routes (for n8n - no auth required, but should use webhook secret)
     Route::prefix('webhooks')->group(function () {

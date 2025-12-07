@@ -16,7 +16,7 @@ class RecipeService
     private $pantryService;
     private $shoppingListService;
 
-    function __construct(PantryService $pantryService, ShoppingListService $shoppingListService)
+    public function __construct(PantryService $pantryService, ShoppingListService $shoppingListService)
     {
         $this->pantryService = $pantryService;
         $this->shoppingListService = $shoppingListService;
@@ -28,18 +28,17 @@ class RecipeService
             ->where('household_id', $householdId)
             ->get();
         
-        // Format ingredients to include name and unit name
         return $recipes->map(function ($recipe) {
             $recipe->ingredients = $recipe->ingredients->map(function ($ingredient) {
                 $unit = Unit::find($ingredient->pivot->unit_id);
                 return [
                     'id' => $ingredient->id,
                     'name' => $ingredient->name,
-                    'ingredient_name' => $ingredient->name, // Alias for easier access
+                    'ingredient_name' => $ingredient->name,
                     'quantity' => $ingredient->pivot->quantity,
                     'unit_id' => $ingredient->pivot->unit_id,
-                    'unit_name' => $unit ? $unit->name : null, // Direct unit name
-                    'unit_abbreviation' => $unit ? $unit->abbreviation : null, // Direct unit abbreviation
+                    'unit_name' => $unit ? $unit->name : null,
+                    'unit_abbreviation' => $unit ? $unit->abbreviation : null,
                     'unit' => $unit ? [
                         'id' => $unit->id,
                         'name' => $unit->name,
@@ -59,17 +58,16 @@ class RecipeService
             ->first();
         
         if ($recipe) {
-            // Format ingredients to include name and unit name
             $recipe->ingredients = $recipe->ingredients->map(function ($ingredient) {
                 $unit = Unit::find($ingredient->pivot->unit_id);
                 return [
                     'id' => $ingredient->id,
                     'name' => $ingredient->name,
-                    'ingredient_name' => $ingredient->name, // Alias for easier access
+                    'ingredient_name' => $ingredient->name,
                     'quantity' => $ingredient->pivot->quantity,
                     'unit_id' => $ingredient->pivot->unit_id,
-                    'unit_name' => $unit ? $unit->name : null, // Direct unit name
-                    'unit_abbreviation' => $unit ? $unit->abbreviation : null, // Direct unit abbreviation
+                    'unit_name' => $unit ? $unit->name : null,
+                    'unit_abbreviation' => $unit ? $unit->abbreviation : null,
                     'unit' => $unit ? [
                         'id' => $unit->id,
                         'name' => $unit->name,
@@ -97,19 +95,16 @@ class RecipeService
 
             if (isset($data['ingredients']) && is_array($data['ingredients'])) {
                 foreach ($data['ingredients'] as $ingredientData) {
-                    // Verify ingredient belongs to household before attaching
                     $ingredient = Ingredient::where('id', $ingredientData['ingredient_id'])
                         ->where('household_id', $householdId)
                         ->first();
 
                     if ($ingredient) {
-                        // Attach ingredient to recipe
                         $recipe->ingredients()->attach($ingredientData['ingredient_id'], [
                             'quantity' => $ingredientData['quantity'],
                             'unit_id' => $ingredientData['unit_id'],
                         ]);
 
-                        // Automatically add ingredient to pantry/inventory
                         try {
                             $this->pantryService->create($householdId, [
                                 'ingredient_id' => $ingredientData['ingredient_id'],
@@ -122,31 +117,25 @@ class RecipeService
                             \Log::warning('Failed to add ingredient to pantry when creating recipe: ' . $e->getMessage());
                         }
 
-                        // Automatically add ingredient to shopping list
                         try {
-                            // Get or create an active shopping list for the household
                             $shoppingList = ShoppingList::where('household_id', $householdId)
                                 ->where('is_completed', false)
                                 ->orderBy('created_at', 'desc')
                                 ->first();
 
                             if (!$shoppingList) {
-                                // Create a new shopping list if none exists
                                 $shoppingList = $this->shoppingListService->create($householdId, 'Shopping List - ' . date('Y-m-d'));
                             }
 
-                            // Check if item already exists in shopping list (same ingredient and unit)
                             $existingItem = ShoppingListItem::where('shopping_list_id', $shoppingList->id)
                                 ->where('ingredient_id', $ingredientData['ingredient_id'])
                                 ->where('unit_id', $ingredientData['unit_id'])
                                 ->first();
 
                             if ($existingItem) {
-                                // Merge quantities if duplicate exists
                                 $existingItem->quantity += $ingredientData['quantity'];
                                 $existingItem->save();
                             } else {
-                                // Add new item to shopping list
                                 $this->shoppingListService->addItem(
                                     $shoppingList->id,
                                     $householdId,
@@ -163,18 +152,16 @@ class RecipeService
             }
 
             $recipe->load('ingredients');
-            
-            // Format ingredients to include name and unit name
             $recipe->ingredients = $recipe->ingredients->map(function ($ingredient) {
                 $unit = Unit::find($ingredient->pivot->unit_id);
                 return [
                     'id' => $ingredient->id,
                     'name' => $ingredient->name,
-                    'ingredient_name' => $ingredient->name, // Alias for easier access
+                    'ingredient_name' => $ingredient->name,
                     'quantity' => $ingredient->pivot->quantity,
                     'unit_id' => $ingredient->pivot->unit_id,
-                    'unit_name' => $unit ? $unit->name : null, // Direct unit name
-                    'unit_abbreviation' => $unit ? $unit->abbreviation : null, // Direct unit abbreviation
+                    'unit_name' => $unit ? $unit->name : null,
+                    'unit_abbreviation' => $unit ? $unit->abbreviation : null,
                     'unit' => $unit ? [
                         'id' => $unit->id,
                         'name' => $unit->name,
@@ -231,18 +218,16 @@ class RecipeService
         }
 
         $recipe->load('ingredients');
-        
-        // Format ingredients to include name and unit name
         $recipe->ingredients = $recipe->ingredients->map(function ($ingredient) {
             $unit = Unit::find($ingredient->pivot->unit_id);
             return [
                 'id' => $ingredient->id,
                 'name' => $ingredient->name,
-                'ingredient_name' => $ingredient->name, // Alias for easier access
+                'ingredient_name' => $ingredient->name,
                 'quantity' => $ingredient->pivot->quantity,
                 'unit_id' => $ingredient->pivot->unit_id,
-                'unit_name' => $unit ? $unit->name : null, // Direct unit name
-                'unit_abbreviation' => $unit ? $unit->abbreviation : null, // Direct unit abbreviation
+                'unit_name' => $unit ? $unit->name : null,
+                'unit_abbreviation' => $unit ? $unit->abbreviation : null,
                 'unit' => $unit ? [
                     'id' => $unit->id,
                     'name' => $unit->name,
@@ -283,4 +268,3 @@ class RecipeService
             ->get();
     }
 }
-

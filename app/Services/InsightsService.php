@@ -13,6 +13,27 @@ class InsightsService
 {
     function getWeeklyInsights($householdId, $weekStartDate = null)
     {
+        $dateRange = $this->getWeekDateRange($weekStartDate);
+        $spending = $this->getSpendingData($householdId, $dateRange['start'], $dateRange['end']);
+        $waste = $this->getWasteData($householdId, $dateRange['start']);
+        $planning = $this->getPlanningData($householdId, $dateRange['start']);
+        $expiringSoon = $this->getExpiringSoonData($householdId);
+
+        return [
+            'week' => [
+                'start_date' => $dateRange['start']->toDateString(),
+                'end_date' => $dateRange['end']->toDateString(),
+            ],
+            'spending' => $spending,
+            'waste' => $waste,
+            'planning' => $planning,
+            'expiring_soon' => $expiringSoon,
+            'ai_summary' => $this->generateAISummary($householdId, $spending['total'], $waste['count'], $planning['meals_planned'], $expiringSoon),
+        ];
+    }
+
+    private function getWeekDateRange($weekStartDate = null)
+    {
         if (!$weekStartDate) {
             $weekStartDate = Carbon::now()->startOfWeek()->toDateString();
         }
@@ -20,7 +41,14 @@ class InsightsService
         $startDate = Carbon::parse($weekStartDate)->startOfWeek();
         $endDate = $startDate->copy()->endOfWeek();
 
-        // Expenses
+        return [
+            'start' => $startDate,
+            'end' => $endDate,
+        ];
+    }
+
+    private function getSpendingData($householdId, $startDate, $endDate)
+    {
         $expenses = Expense::where('household_id', $householdId)
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
@@ -31,7 +59,16 @@ class InsightsService
             return $items->sum('amount');
         });
 
-        // Waste (expired items)
+        return [
+            'total' => round($totalSpend, 2),
+            'count' => $expenseCount,
+            'average_per_transaction' => $expenseCount > 0 ? round($totalSpend / $expenseCount, 2) : 0,
+            'by_category' => $byCategory,
+        ];
+    }
+
+    private function getWasteData($householdId, $startDate)
+    {
         $expiredItems = Inventory::with('ingredient')
             ->where('household_id', $householdId)
             ->whereNotNull('expiry_date')
@@ -39,7 +76,6 @@ class InsightsService
             ->where('expiry_date', '>=', $startDate->copy()->subWeek())
             ->get();
 
-        $wasteCount = $expiredItems->count();
         $wasteItems = $expiredItems->map(function ($item) {
             return [
                 'ingredient' => $item->ingredient->name,
@@ -48,7 +84,14 @@ class InsightsService
             ];
         });
 
-        // Planning (meals planned)
+        return [
+            'count' => $expiredItems->count(),
+            'items' => $wasteItems,
+        ];
+    }
+
+    private function getPlanningData($householdId, $startDate)
+    {
         $week = Week::with('meals')->where('household_id', $householdId)
             ->where('start_date', $startDate->toDateString())
             ->first();
@@ -68,7 +111,15 @@ class InsightsService
             }
         }
 
-        // Expiring soon (next 7 days)
+        return [
+            'meals_planned' => $mealsPlanned,
+            'by_slot' => $mealsBySlot,
+            'coverage' => round(($mealsPlanned / 21) * 100, 1),
+        ];
+    }
+
+    private function getExpiringSoonData($householdId)
+    {
         $expiringSoon = Inventory::with('ingredient')
             ->where('household_id', $householdId)
             ->whereNotNull('expiry_date')
@@ -85,29 +136,7 @@ class InsightsService
                 ];
             });
 
-        return [
-            'week' => [
-                'start_date' => $startDate->toDateString(),
-                'end_date' => $endDate->toDateString(),
-            ],
-            'spending' => [
-                'total' => round($totalSpend, 2),
-                'count' => $expenseCount,
-                'average_per_transaction' => $expenseCount > 0 ? round($totalSpend / $expenseCount, 2) : 0,
-                'by_category' => $byCategory,
-            ],
-            'waste' => [
-                'count' => $wasteCount,
-                'items' => $wasteItems,
-            ],
-            'planning' => [
-                'meals_planned' => $mealsPlanned,
-                'by_slot' => $mealsBySlot,
-                'coverage' => round(($mealsPlanned / 21) * 100, 1),
-            ],
-            'expiring_soon' => $expiringSoon,
-            'ai_summary' => $this->generateAISummary($householdId, $totalSpend, $wasteCount, $mealsPlanned, $expiringSoon),
-        ];
+        return $expiringSoon;
     }
 
     private function generateAISummary($householdId, $totalSpend, $wasteCount, $mealsPlanned, $expiringSoon)
@@ -152,4 +181,3 @@ class InsightsService
         return null;
     }
 }
-

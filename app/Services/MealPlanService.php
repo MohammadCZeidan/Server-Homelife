@@ -14,6 +14,7 @@ class MealPlanService
     {
         $this->webhookService = $webhookService ?? new WebhookService();
     }
+
     function getWeeklyPlan($householdId, $weekStartDate = null)
     {
         if (!$weekStartDate) {
@@ -66,10 +67,7 @@ class MealPlanService
             $existingMeal->recipe_id = $recipeId;
             $existingMeal->save();
             $existingMeal->load('recipe');
-            
-            // Trigger webhook for n8n (WF3) when meal is updated
             $this->webhookService->triggerMealPlanUpdated($weekId, $householdId);
-            
             return $existingMeal;
         }
 
@@ -79,12 +77,8 @@ class MealPlanService
         $meal->slot = $slot;
         $meal->recipe_id = $recipeId;
         $meal->save();
-
         $meal->load('recipe');
-        
-        // Trigger webhook for n8n (WF3)
         $this->webhookService->triggerMealPlanUpdated($weekId, $householdId);
-        
         return $meal;
     }
 
@@ -108,7 +102,6 @@ class MealPlanService
 
         $deleted = $meal->delete();
         
-        // Trigger webhook for n8n (WF3) if meal was deleted
         if ($deleted) {
             $this->webhookService->triggerMealPlanUpdated($weekId, $householdId);
         }
@@ -116,4 +109,3 @@ class MealPlanService
         return $deleted;
     }
 }
-

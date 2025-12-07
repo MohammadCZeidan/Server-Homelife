@@ -43,13 +43,6 @@ class ValidateHouseholdAccess
             ], 403);
         }
 
-        // For resources that have household_id in their model (like Inventory, Recipe, etc.)
-        // The controller should validate this, but we can add an extra layer here
-        // by checking if the resource ID belongs to the user's household
-        
-        // This is a general check - specific resource validation should be done in controllers
-        // where we can check the actual model's household_id
-
         return $next($request);
     }
 }

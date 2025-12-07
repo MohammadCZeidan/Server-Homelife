@@ -20,11 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
         ]);
         
-        // Add minimal session initialization to prevent errors
-        $middleware->web(prepend: [
-            \App\Http\Middleware\InitializeSession::class,
-        ]);
-        
         // API routes never use sessions
         $middleware->api(remove: [
             \Illuminate\Session\Middleware\StartSession::class,

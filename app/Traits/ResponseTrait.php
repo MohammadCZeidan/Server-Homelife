@@ -4,12 +4,18 @@ namespace App\Traits;
 
 trait ResponseTrait
 {
-    protected function responseJSON($payload, $status = "success", $status_code = 200)
+    protected function responseJSON($payload, $status = "success", $status_code = 200, $message = null)
     {
-        return response()->json([
+        $response = [
             "status" => $status,
             "payload" => $payload
-        ], $status_code);
+        ];
+        
+        if ($message !== null) {
+            $response["message"] = $message;
+        }
+        
+        return response()->json($response, $status_code);
     }
 }
 

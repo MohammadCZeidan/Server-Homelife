@@ -3,11 +3,24 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use App\Services\WebhookService;
 
 class N8nNotificationController extends Controller
 {
+    private WebhookService $webhookService;
+
+    public function __construct(WebhookService $webhookService)
+    {
+        $this->webhookService = $webhookService;
+    }
+
+    /**
+     * Send notification via n8n
+     * Generic endpoint for sending notifications through n8n workflows
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function sendNotification(Request $request)
     {
         $request->validate([
@@ -19,58 +32,17 @@ class N8nNotificationController extends Controller
             'sender_email' => 'required|email',
         ]);
 
-        $householdId = $request->input('household_id');
-        $channels = $request->input('channels');
-        $message = $request->input('message');
-        $subject = $request->input('subject', 'HomeLife Notification');
-        $senderEmail = $request->input('sender_email');
+        $notificationData = [
+            'household_id' => $request->input('household_id'),
+            'channels' => $request->input('channels'),
+            'message' => $request->input('message'),
+            'subject' => $request->input('subject', 'HomeLife Notification'),
+            'sender_email' => $request->input('sender_email'),
+        ];
 
-        // Get n8n webhook URL from environment
-        $webhookUrl = env('N8N_NOTIFICATION_WEBHOOK_URL');
-        
-        if (!$webhookUrl) {
-            return response()->json([
-                'success' => false,
-                'message' => 'n8n webhook URL not configured'
-            ], 500);
-        }
+        $result = $this->webhookService->sendNotification($notificationData);
 
-        try {
-            // Trigger n8n webhook with notification data
-            $response = Http::post($webhookUrl, [
-                'household_id' => $householdId,
-                'channels' => $channels,
-                'message' => $message,
-                'subject' => $subject,
-                'sender_email' => $senderEmail,
-            ]);
-
-            if ($response->successful()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Notification sent successfully'
-                ]);
-            } else {
-                Log::error('n8n webhook failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to send notification'
-                ], 500);
-            }
-        } catch (\Exception $e) {
-            Log::error('n8n notification error', [
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error sending notification: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json($result, $result['success'] ? 200 : 500);
     }
 }
 
