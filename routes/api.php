@@ -12,8 +12,6 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\NutritionController;
 use App\Http\Controllers\InsightsController;
-use App\Http\Controllers\N8nController;
-use App\Http\Controllers\N8nNotificationController;
 
 // All API routes are versioned under v0.1
 Route::prefix('v0.1')->group(function () {
