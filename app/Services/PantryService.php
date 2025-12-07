@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Inventory;
 use App\Models\Ingredient;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Facades\Log;
 
 class PantryService
 {
@@ -115,8 +117,8 @@ class PantryService
         try {
             $deleted = $inventory->delete();
             return $deleted;
-        } catch (\Exception $e) {
-            \Log::error('Delete inventory error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Delete inventory error: ' . $e->getMessage());
             return false;
         }
     }

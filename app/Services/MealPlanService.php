@@ -8,6 +8,7 @@ use Carbon\Carbon;
 
 class MealPlanService
 {
+<<<<<<< HEAD
     private $webhookService;
 
     public function __construct(WebhookService $webhookService = null)
@@ -15,6 +16,8 @@ class MealPlanService
         $this->webhookService = $webhookService ?? new WebhookService();
     }
 
+=======
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
     function getWeeklyPlan($householdId, $weekStartDate = null)
     {
         if (!$weekStartDate) {
@@ -67,7 +70,11 @@ class MealPlanService
             $existingMeal->recipe_id = $recipeId;
             $existingMeal->save();
             $existingMeal->load('recipe');
+<<<<<<< HEAD
             $this->webhookService->triggerMealPlanUpdated($weekId, $householdId);
+=======
+            
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
             return $existingMeal;
         }
 
@@ -78,7 +85,11 @@ class MealPlanService
         $meal->recipe_id = $recipeId;
         $meal->save();
         $meal->load('recipe');
+<<<<<<< HEAD
         $this->webhookService->triggerMealPlanUpdated($weekId, $householdId);
+=======
+        
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         return $meal;
     }
 
@@ -102,10 +113,13 @@ class MealPlanService
 
         $deleted = $meal->delete();
         
+<<<<<<< HEAD
         if ($deleted) {
             $this->webhookService->triggerMealPlanUpdated($weekId, $householdId);
         }
         
+=======
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         return $deleted;
     }
 }

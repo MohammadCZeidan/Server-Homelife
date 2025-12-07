@@ -40,25 +40,23 @@ class IngredientController extends Controller
         $user = Auth::user();
         $this->validateRequest($request, 'create');
 
-        // Check if ingredient already exists (idempotent operation)
+        $householdId = $user->household_id;
+
         $existingIngredient = Ingredient::where('name', $request->name)
-            ->where('household_id', $user->household_id)
+            ->where('household_id', $householdId)
             ->first();
 
         if ($existingIngredient) {
-            // If unit_id is provided and different, update it
             if ($request->has('unit_id') && $request->unit_id != $existingIngredient->unit_id) {
                 $existingIngredient->unit_id = $request->unit_id;
                 $existingIngredient->save();
             }
             
-            // Load unit relationship and return existing ingredient
             $existingIngredient->load('unit');
             return $this->responseJSON($existingIngredient);
         }
 
-        // Create new ingredient if it doesn't exist
-        $ingredient = $this->ingredientService->create($user->household_id, $request->all());
+        $ingredient = $this->ingredientService->create($householdId, $request->all());
         return $this->responseJSON($ingredient);
     }
 }

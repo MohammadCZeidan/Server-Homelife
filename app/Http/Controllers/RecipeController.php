@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Exception;
 use App\Services\RecipeService;
 use App\Services\IngredientService;
 use App\Services\UnitService;
@@ -15,19 +17,30 @@ use App\Models\Inventory;
 class RecipeController extends Controller
 {
     private RecipeService $recipeService;
+<<<<<<< HEAD
     private IngredientService $ingredientService;
     private UnitService $unitService;
 
     public function __construct(RecipeService $recipeService, IngredientService $ingredientService, UnitService $unitService)
+=======
+    private AIService $aiService;
+    private IngredientService $ingredientService;
+    private UnitService $unitService;
+
+    public function __construct(RecipeService $recipeService, AIService $aiService, IngredientService $ingredientService, UnitService $unitService)
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
     {
         $this->recipeService = $recipeService;
         $this->ingredientService = $ingredientService;
         $this->unitService = $unitService;
     }
 
+<<<<<<< HEAD
     /**
      * Helper function to find or create a unit by abbreviation
      */
+=======
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
     private function findOrCreateUnit(string $unitAbbreviation): Unit
     {
         $unit = Unit::where('abbreviation', $unitAbbreviation)
@@ -35,7 +48,6 @@ class RecipeController extends Controller
             ->first();
         
         if (!$unit) {
-            // Create unit if it doesn't exist
             $unitNameMap = [
                 'g' => 'Gram',
                 'kg' => 'Kilogram',
@@ -185,8 +197,13 @@ class RecipeController extends Controller
         try {
             $recipe = $this->recipeService->create($user->household_id, $requestData);
             return $this->responseJSON($recipe);
+<<<<<<< HEAD
         } catch (\Exception $e) {
             \Log::error('Recipe creation failed: ' . $e->getMessage());
+=======
+        } catch (Exception $e) {
+            Log::error('Recipe creation failed: ' . $e->getMessage());
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
             return $this->responseJSON(null, "failure", 500);
         }
     }
@@ -305,7 +322,11 @@ class RecipeController extends Controller
         return $this->responseJSON($recipe);
     }
 
+<<<<<<< HEAD
     public function delete($id): JsonResponse
+=======
+    public function delete($id): JsonResponse // Deletes a recipe (must belong to user's household)
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
     {
         $user = Auth::user();
         $deleted = $this->recipeService->delete($id, $user->household_id);
@@ -328,6 +349,10 @@ class RecipeController extends Controller
     public function getSubstitutions(Request $request, $id): JsonResponse
     {
         $user = Auth::user();
+<<<<<<< HEAD
+=======
+
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $recipe = $this->recipeService->get($id, $user->household_id);
         
         if (!$recipe) {
@@ -335,6 +360,10 @@ class RecipeController extends Controller
         }
 
         $recipeIngredientIds = $recipe->ingredients->pluck('id')->toArray();
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $pantryIngredientIds = Inventory::where('household_id', $user->household_id)
             ->where('quantity', '>', 0)
             ->pluck('ingredient_id')
@@ -345,8 +374,14 @@ class RecipeController extends Controller
         $substitutions = [];
         
         foreach ($missingIngredientIds as $missingId) {
+<<<<<<< HEAD
             $ingredient = Ingredient::where('household_id', $user->household_id)->find($missingId);
             if ($ingredient) {
+=======
+            $sub = $this->aiService->getSmartSubstitutions($missingId, $user->household_id);
+            if (!empty($sub)) {
+                $ingredient = Ingredient::where('household_id', $user->household_id)->find($missingId);
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
                 $substitutions[] = [
                     'missing_ingredient' => $ingredient->name,
                     'substitution' => 'No substitution found',

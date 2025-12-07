@@ -15,7 +15,8 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-    public function displayError(): JsonResponse{
+    public function displayError(): JsonResponse
+    {
         return $this->responseJSON(null, "failure", 401);
     }
 
@@ -40,22 +41,42 @@ class AuthController extends Controller
         return $this->responseJSON($user);
     }
 
+<<<<<<< HEAD
     public function logout(): JsonResponse{
+=======
+    public function logout(): JsonResponse
+    {
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $this->authService->logout();
         return $this->responseJSON(null, "success");
     }
 
+<<<<<<< HEAD
     public function refresh(): JsonResponse{
+=======
+    public function refresh(): JsonResponse
+    {
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $user = $this->authService->refresh();
         return $this->responseJSON($user);
     }
 
+<<<<<<< HEAD
     public function me(): JsonResponse{
+=======
+    public function me(): JsonResponse
+    {
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $user = $this->authService->me();
         return $this->responseJSON($user);
     }
 
+<<<<<<< HEAD
     public function getAllUsers(): JsonResponse{
+=======
+    public function getAllUsers(): JsonResponse
+    {
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $users = User::with(['role', 'household'])
             ->select('id', 'name', 'email', 'user_role_id', 'household_id', 'created_at')
             ->get()
@@ -82,7 +103,21 @@ class AuthController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         $user = $this->authService->me();
+<<<<<<< HEAD
         $this->validateRequest($request, 'updateProfile', ['user' => $user]);
+=======
+        
+        $request->validate([
+            'name' => 'nullable|string|max:255',
+            'email' => [
+                'nullable',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id)
+            ],
+        ]);
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
 
         $user = $this->authService->updateProfile($request->all());
         return $this->responseJSON($user);

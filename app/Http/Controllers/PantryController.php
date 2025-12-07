@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 use App\Services\PantryService;
 use App\Models\Inventory;
 
@@ -20,6 +22,10 @@ class PantryController extends Controller
     public function getAll(Request $request): JsonResponse
     {
         $user = Auth::user();
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $inventory = $this->pantryService->getAll($user->household_id);
         return $this->responseJSON($inventory);
     }
@@ -43,7 +49,10 @@ class PantryController extends Controller
     {
         $user = Auth::user();
 
+<<<<<<< HEAD
         // Get the inventory item to access its ingredient_id
+=======
+>>>>>>> 1a3e34bd8fe77bbd575e8a222cb42d55f1a808d3
         $inventory = Inventory::where('id', $id)
             ->where('household_id', $user->household_id)
             ->first();
@@ -52,7 +61,6 @@ class PantryController extends Controller
             return $this->responseJSON(null, "failure", 404);
         }
 
-        // Validate with unique ingredient name check (ignore current ingredient)
         $ingredientName = $request->input('ingredient_name') ?? $request->input('name');
         $validationRules = [
             'quantity' => 'nullable|numeric|min:0',
@@ -67,13 +75,12 @@ class PantryController extends Controller
             'fat' => 'nullable|numeric|min:0',
         ];
 
-        // If ingredient name is being updated, validate uniqueness
         if ($ingredientName) {
             $validationRules['ingredient_name'] = [
                 'nullable',
                 'string',
                 'max:255',
-                \Illuminate\Validation\Rule::unique('ingredients', 'name')
+                Rule::unique('ingredients', 'name')
                     ->where('household_id', $user->household_id)
                     ->ignore($inventory->ingredient_id)
             ];
@@ -81,7 +88,7 @@ class PantryController extends Controller
                 'nullable',
                 'string',
                 'max:255',
-                \Illuminate\Validation\Rule::unique('ingredients', 'name')
+                Rule::unique('ingredients', 'name')
                     ->where('household_id', $user->household_id)
                     ->ignore($inventory->ingredient_id)
             ];
@@ -102,7 +109,6 @@ class PantryController extends Controller
     {
         $user = Auth::user();
 
-        // Validate that ID is numeric
         if (!is_numeric($id)) {
             return $this->responseJSON(null, "failure", 400);
         }
@@ -142,14 +148,13 @@ class PantryController extends Controller
         $days = (int) $request->get('days', 7);
         $inventory = $this->pantryService->getExpiringSoon($user->household_id, $days);
         
-        // Add "use first" badge logic (items expiring in 1-2 days get priority)
         $items = $inventory->map(function ($item) {
             if (!$item->expiry_date) {
                 return $item;
             }
             
-            $expiryDate = \Carbon\Carbon::parse($item->expiry_date);
-            $now = \Carbon\Carbon::now();
+            $expiryDate = Carbon::parse($item->expiry_date);
+            $now = Carbon::now();
             $daysUntil = $now->diffInDays($expiryDate, false);
             
             $item->use_first = $daysUntil <= 2 && $daysUntil >= 0;

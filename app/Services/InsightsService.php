@@ -7,7 +7,9 @@ use App\Models\Inventory;
 use App\Models\Week;
 use App\Models\Meal;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class InsightsService
 {
@@ -174,8 +176,8 @@ class InsightsService
                 $summary = $response->json()['choices'][0]['message']['content'];
                 return trim($summary);
             }
-        } catch (\Exception $e) {
-            \Log::error('AI Insights Summary Error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('AI Insights Summary Error: ' . $e->getMessage());
         }
 
         return null;

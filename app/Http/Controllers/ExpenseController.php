@@ -16,7 +16,8 @@ class ExpenseController extends Controller
         $this->expenseService = $expenseService;
     }
 
-    public function getAll(Request $request): JsonResponse{
+    public function getAll(Request $request): JsonResponse
+    {
         $user = Auth::user();
         $expenses = $this->expenseService->getAll($user->household_id);
         return $this->responseJSON($expenses);
@@ -57,7 +58,8 @@ class ExpenseController extends Controller
         return $this->responseJSON($expense);
     }
 
-    public function delete($id): JsonResponse{
+    public function delete($id): JsonResponse
+    {
         $user = Auth::user();
         $deleted = $this->expenseService->delete($id, $user->household_id);
         
