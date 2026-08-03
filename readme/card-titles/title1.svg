@@ -1,0 +1,7 @@
+<svg width="820" height="110" viewBox="0 0 820 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="820" height="110" rx="18" fill="#0D140F"/>
+  <rect x="18" y="18" width="784" height="74" rx="14" fill="#132116" stroke="#22C55E" stroke-width="2"/>
+  <circle cx="62" cy="55" r="18" fill="#22C55E"/>
+  <path d="M48 57l14-13 14 13v13H52V57zM58 70V58h8v12" stroke="#0D140F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="100" y="66" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="800" fill="#F0FDF4">HomeLife Server</text>
+</svg>
